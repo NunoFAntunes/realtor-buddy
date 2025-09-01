@@ -22,6 +22,14 @@ from transformers import (
     AutoModelForCausalLM, 
     pipeline
 )
+
+try:
+    from transformers import BitsAndBytesConfig
+    import bitsandbytes
+    QUANTIZATION_AVAILABLE = True
+except ImportError:
+    QUANTIZATION_AVAILABLE = False
+    BitsAndBytesConfig = None
 import torch
 from huggingface_hub import login as hf_login
 
@@ -88,8 +96,8 @@ class CroatianRealEstateAgent:
         logger.info(f"Initializing Croatian Real Estate Agent with model: {model_name}")
     
     def _setup_local_llm(self) -> HuggingFacePipeline:
-        """Set up local Llama-3.1-8B model optimized for RTX 2070 + 32GB RAM."""
-        logger.info("Setting up local Llama-3.1-8B model for RTX 2070...")
+        """Set up local Llama-3.1-8B model with conditional quantization for RTX 2070."""
+        logger.info("Setting up Llama-3.1-8B model with auto-detection for RTX 2070...")
         
         try:
             # Authenticate to Hugging Face Hub using provided env token(s)
@@ -110,6 +118,22 @@ class CroatianRealEstateAgent:
 
             hub_kwargs = {"token": hf_token} if hf_token else {}
             
+            # Check if CUDA and quantization are available
+            cuda_available = torch.cuda.is_available()
+            use_quantization = QUANTIZATION_AVAILABLE and cuda_available
+            
+            if use_quantization:
+                logger.info("Using 4-bit quantization (CUDA available)")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_compute_dtype=torch.bfloat16
+                )
+            else:
+                logger.info("Quantization not available or CUDA not detected, using FP16")
+                quantization_config = None
+            
             # Load tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
@@ -122,14 +146,23 @@ class CroatianRealEstateAgent:
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
             
-            # Load model in FP16 without quantization (better quality + your hardware can handle it)
+            # Load model with conditional quantization
+            model_kwargs = {
+                "device_map": "auto",
+                "trust_remote_code": True,
+                "low_cpu_mem_usage": True,
+                **hub_kwargs
+            }
+            
+            if use_quantization:
+                model_kwargs["quantization_config"] = quantization_config
+            else:
+                # Fallback to FP16 if quantization not available
+                model_kwargs["torch_dtype"] = torch.float16
+            
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
-                device_map="auto",  # Automatically use GPU + CPU if needed
-                trust_remote_code=True,
-                dtype=torch.float16,  # FP16 for GPU efficiency
-                low_cpu_mem_usage=True,     # Optimize CPU memory usage
-                **hub_kwargs
+                **model_kwargs
             )
             
             # Create text generation pipeline
@@ -147,7 +180,8 @@ class CroatianRealEstateAgent:
             # Wrap in LangChain HuggingFacePipeline
             llm = HuggingFacePipeline(pipeline=pipe)
             
-            logger.info("Successfully loaded local Llama-3.1-8B model")
+            model_type = "quantized" if use_quantization else "FP16"
+            logger.info(f"Successfully loaded {model_type} Llama-3.1-8B model")
             return llm
             
         except Exception as e:

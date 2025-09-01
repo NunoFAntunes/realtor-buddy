@@ -1,0 +1,107 @@
+.app {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 2rem 0;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: white;
+}
+
+.title {
+  font-size: 3rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+
+.search-section {
+  margin-bottom: 3rem;
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  min-height: 400px;
+}
+
+.results-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.results-header p {
+  color: #666;
+  font-weight: 500;
+}
+
+.error {
+  text-align: center;
+  padding: 2rem;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: #666;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+
+.examples {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.examples p {
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.examples ul {
+  list-style: none;
+  text-align: left;
+}
+
+.examples li {
+  background: #f8fafc;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 0.5rem;
+  font-style: italic;
+  color: #555;
+}
+
+@media (max-width: 768px) {
+  .app {
+    padding: 1rem 0;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .content {
+    margin: 0 1rem;
+    padding: 1.5rem;
+  }
+}

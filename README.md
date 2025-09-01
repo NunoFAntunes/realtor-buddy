@@ -27,7 +27,8 @@ realtor-buddy/
 │   │   ├── schema_docs.py      # LangChain-formatted documentation
 │   │   ├── query_patterns.py   # Common search patterns & value formats
 │   │   ├── training_examples.py # Real-world query examples for training
-│   │   └── schema_analyzer.py  # Unified interface for schema analysis
+│   │   ├── schema_analyzer.py  # Unified interface for schema analysis
+│   │   └── sql_agent.py        # Main LangChain SQL agent with Llama-3.1-8B
 │   ├── cli/                    # Command-line interface
 │   │   └── main.py            # Interactive CLI with Rich formatting
 │   └── utils/                  # Configuration and utilities
@@ -134,7 +135,7 @@ python -m src.realtor_buddy.cli.main health
 # Configuration status
 python -m src.realtor_buddy.cli.main config
 
-# Property search (coming in Phase 2)
+# Property search (Phase 2C - CLI integration coming soon)
 python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
 ```
 
@@ -170,10 +171,28 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
   - [x] LangChain configuration formatting
   - [x] Query validation and error detection
 
-### 🚧 Phase 2B: LangChain Implementation (Next)
-- [ ] LangChain SQL agent configuration
-- [ ] Few-shot prompting with real estate examples
-- [ ] Natural language query processing
+### ✅ Phase 2B: LangChain SQL Agent (Complete)
+- [x] **LangChain SQL agent configuration**
+  - [x] Local Llama-3.1-8B integration with HuggingFace Transformers
+  - [x] Optimized for RTX 2070 + 32GB RAM (FP16, no quantization)
+  - [x] SQLDatabaseChain with custom Croatian real estate prompt templates
+  - [x] Custom SQL query parser for clean Llama output extraction
+- [x] **Database integration and safety**
+  - [x] Extended Phase 1 database connection with LangChain SQLDatabase
+  - [x] Read-only operations with connection pooling
+  - [x] Built-in SQL query validation and result limiting
+  - [x] Comprehensive error handling and logging
+- [x] **Croatian real estate domain optimization**
+  - [x] Few-shot prompting with 5 best training examples
+  - [x] Croatian terminology guidance in system prompts
+  - [x] Integrated schema documentation and field mappings
+  - [x] Natural language to SQL translation pipeline
+
+### 🚧 Phase 2C: CLI Integration & Testing (Next)
+- [ ] Add search command to existing CLI interface
+- [ ] Query result formatting and display
+- [ ] Interactive query refinement and suggestions
+- [ ] Comprehensive testing with real estate queries
 
 ### 📅 Future Phases
 - **Phase 3**: Query generation and execution
@@ -218,18 +237,42 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
 - **Query Validation**: Detects invalid price ranges, unrecognized locations, unusual values
 - **Training Examples**: Categories include basic searches, luxury properties, budget finds, complex multi-criteria
 
-### Phase 2B: LangChain SQL Agent Implementation (NEXT)
-4. **LangChain SQL Chain Setup**
-   - Initialize SQL database chain with MariaDB connection
-   - Configure SQL agent with schema information and Croatian field mappings
-   - Implement few-shot prompting with real estate domain examples
-   - Add custom prompt templates for Croatian property terminology
+### Phase 2B: LangChain SQL Agent Implementation ✅
+4. **LangChain SQL Chain Setup (COMPLETE)**
+   - ✅ Initialized SQLDatabaseChain with MariaDB connection using existing Phase 1 infrastructure
+   - ✅ Configured SQL agent with comprehensive Croatian schema information and field mappings
+   - ✅ Implemented few-shot prompting with 5 best real estate domain examples
+   - ✅ Added custom prompt templates optimized for Croatian property terminology
+   - ✅ Integrated local Llama-3.1-8B model with HuggingFace Transformers (RTX 2070 optimized)
 
-5. **Natural Language Processing**
-   - Build query intent classification (search, filter, aggregate)
-   - Implement Croatian/English query support
-   - Add location normalization (Croatian city/neighborhood names)
-   - Create price range and property type standardization
+**Key Implementation File:**
+- `sql_agent.py`: Complete LangChain SQL agent with local Llama-3.1-8B integration
+
+**Features Delivered:**
+- **Local Llama-3.1-8B Integration**: FP16 optimization, no quantization, auto device mapping
+- **Croatian Real Estate Prompts**: System prompts with terminology guidance and few-shot examples
+- **Database Safety**: Read-only operations, connection pooling, query validation, result limiting
+- **Error Handling**: Comprehensive error recovery, structured responses, detailed logging
+- **Custom SQL Parser**: Extracts clean SQL queries from Llama model outputs
+- **Production Ready**: Connection testing, schema inspection, convenient wrapper functions
+
+**Usage Examples:**
+```python
+# Initialize and use the agent
+from src.realtor_buddy.langchain_agent.sql_agent import create_agent
+agent = create_agent()
+result = agent.query("Find apartments in Zagreb under 200000 euros")
+
+# Quick one-off queries
+from src.realtor_buddy.langchain_agent.sql_agent import quick_query
+result = quick_query("3 bedroom houses with sea view")
+```
+
+5. **Natural Language Processing (INTEGRATED)**
+   - ✅ Query intent classification integrated into prompt templates
+   - ✅ Croatian/English query support through schema mappings and value translations
+   - ✅ Location normalization using Croatian location terms dictionary
+   - ✅ Price range and property type standardization in training examples
 
 ### Phase 3: Query Generation & Execution
 6. **SQL Query Generation**
@@ -339,10 +382,33 @@ The schema analysis system now supports comprehensive query understanding and tr
   AND price < 600000
   ```
 
-## Technical Architecture
+## 🔧 Technical Architecture
 
-- **Database**: MariaDB with comprehensive Croatian property data
-- **AI/LLM**: LangChain with SQL agent for query generation  
-- **Language**: Python with async support for performance
-- **Interface**: CLI initially, with potential web interface later
-- **Deployment**: Docker containers for easy setup and deployment
+### **Current Implementation (Phase 2B Complete)**
+- **Database**: MariaDB with comprehensive Croatian property data (19MB dataset)
+- **AI/LLM**: Local Llama-3.1-8B via HuggingFace Transformers (optimized for RTX 2070)
+- **LangChain**: SQLDatabaseChain with custom Croatian real estate prompts
+- **Language**: Python 3.8+ with SQLAlchemy, Transformers, PyTorch
+- **Interface**: CLI foundation ready, SQL agent API complete
+- **Hardware Requirements**: NVIDIA GPU (RTX 2070+), 16GB+ RAM
+
+### **Key Components**
+1. **Schema Analysis Layer** (Phase 2A)
+   - Croatian ↔ English field mappings (40+ fields)
+   - Query pattern recognition and value translation
+   - Training examples and few-shot prompting templates
+
+2. **LangChain SQL Agent** (Phase 2B)  
+   - Local Llama-3.1-8B integration with custom SQL parser
+   - Croatian real estate domain-optimized prompts
+   - Database safety with read-only operations and query validation
+
+3. **Database Infrastructure** (Phase 1)
+   - MariaDB with Docker setup and health monitoring
+   - SQLAlchemy connection management with pooling
+   - Rich CLI interface with configuration management
+
+### **Deployment Strategy**
+- **Local Development**: Direct Python execution with local Llama model
+- **Production**: Docker containers with GPU support for Llama inference
+- **Future**: Web interface, API endpoints, cloud deployment options

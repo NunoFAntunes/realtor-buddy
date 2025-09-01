@@ -22,7 +22,12 @@ realtor-buddy/
 │   ├── database/               # Database connection and health checks
 │   │   ├── connection.py       # SQLAlchemy-based connection manager
 │   │   └── health_check.py     # Comprehensive database monitoring
-│   ├── langchain_agent/        # LangChain SQL agent (Phase 2)
+│   ├── langchain_agent/        # LangChain SQL agent implementation
+│   │   ├── schema_mapping.py   # Croatian ↔ English field mappings
+│   │   ├── schema_docs.py      # LangChain-formatted documentation
+│   │   ├── query_patterns.py   # Common search patterns & value formats
+│   │   ├── training_examples.py # Real-world query examples for training
+│   │   └── schema_analyzer.py  # Unified interface for schema analysis
 │   ├── cli/                    # Command-line interface
 │   │   └── main.py            # Interactive CLI with Rich formatting
 │   └── utils/                  # Configuration and utilities
@@ -88,18 +93,37 @@ python -m src.realtor_buddy.cli.main health
 python -m src.realtor_buddy.cli.main config
 ```
 
-## 📊 Database Schema
+## 📊 Database Schema & Field Mapping
 
-The core `agency_properties` table contains comprehensive property information:
+The core `agency_properties` table contains comprehensive property information with **Croatian field names** that are intelligently mapped to English equivalents:
 
-- **Basic Info**: Price, location, property type, title, description
-- **Property Details**: Rooms, bathrooms, surface area, floor, elevator
-- **Location Data**: GPS coordinates, address, proximity to transport
-- **Features**: Sea view, parking, balcony, energy rating
-- **Agency Data**: Agency name, type, commission details
-- **Metadata**: Posted date, view count, images
+### 🏠 Property Information
+- **Basic Info**: Price, location (`lokacija`), property type (`tip_nekretnine`), title, description
+- **Property Details**: Rooms (`broj_soba`), bathrooms (`broj_sanitarnih_cvorova`), surface area (`povrsina`), floor (`kat`), elevator (`lift`)
+- **Location Data**: GPS coordinates, address (`ulica`), proximity to transport (`blizina_tramvaja`)
+- **Features**: Sea view (`pogled_na_more`), parking, balcony (`balkon_lodza_terasa`), energy rating (`energetski_razred`)
+- **Agency Data**: Agency name, type (`agencija`/`investitor`/`trgovina`), commission details
+- **Metadata**: Posted date, view count, images (JSON), timestamps
 
-**Croatian Field Names**: The database uses Croatian terminology (`broj_soba`, `povrsina`, `lokacija`, etc.) which the AI agent will intelligently map from English queries.
+### 🗺️ Croatian ↔ English Field Mapping
+The system includes comprehensive field mappings for natural language queries:
+
+| Croatian Field | English Equivalent | Example Values |
+|---|---|---|
+| `broj_soba` | number_of_bedrooms | "1", "2", "3", "4", "5+" |
+| `povrsina` | surface_area | "45", "85.5", "120" (m²) |
+| `lokacija` | location | "Zagreb, Gornji Grad" |
+| `kat` | floor | "prizemlje", "1", "potkrovlje" |
+| `lift` | elevator | "da", "ne" (yes/no) |
+| `pogled_na_more` | sea_view | "da", "ne" (yes/no) |
+| `energetski_razred` | energy_rating | "A+", "A", "B", "C", "D" |
+
+### 🔍 Smart Query Understanding
+The AI agent understands natural language patterns and translates them to proper SQL:
+- **"apartments in Zagreb"** → `property_type LIKE '%stan%' AND lokacija LIKE '%Zagreb%'`
+- **"3 bedrooms under 200k"** → `broj_soba = '3' AND price < 200000`  
+- **"sea view properties"** → `pogled_na_more = 'da'`
+- **"ground floor with elevator"** → `kat = 'prizemlje' AND lift = 'da'`
 
 ## 🔧 Available Commands
 
@@ -124,8 +148,29 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
 - [x] Configuration management with validation
 - [x] Docker-based database setup
 
-### 🚧 Phase 2: LangChain Implementation (Next)
-- [ ] Schema analysis and Croatian field mapping
+### ✅ Phase 2A: Schema Analysis & Mapping (Complete)
+- [x] **Schema analysis and Croatian field mapping**
+  - [x] Complete Croatian ↔ English field mapping dictionary (40+ fields)
+  - [x] Database schema documentation for LangChain agents
+  - [x] Croatian value translation system (`da/ne` → `yes/no`, floor levels, etc.)
+  - [x] Field type validation and casting guidance
+- [x] **Query pattern documentation** 
+  - [x] Common search patterns (location, price, size, features)
+  - [x] Value format specifications and examples
+  - [x] Croatian location terms and property types
+  - [x] Query optimization recommendations
+- [x] **Training examples for LangChain**
+  - [x] 20+ real-world query examples with SQL translations
+  - [x] Categorized examples (basic, luxury, budget, complex)
+  - [x] Few-shot prompting templates
+  - [x] Negative examples showing common mistakes
+- [x] **Unified schema analyzer interface**
+  - [x] Query analysis and component extraction
+  - [x] Field relevance suggestion system
+  - [x] LangChain configuration formatting
+  - [x] Query validation and error detection
+
+### 🚧 Phase 2B: LangChain Implementation (Next)
 - [ ] LangChain SQL agent configuration
 - [ ] Few-shot prompting with real estate examples
 - [ ] Natural language query processing
@@ -151,13 +196,29 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
    - Add database health check functionality
    - Create utility functions for query execution and result formatting
 
-### Phase 2: LangChain SQL Agent Implementation
-3. **Schema Analysis & Documentation**
-   - Generate comprehensive schema documentation for LangChain
-   - Create field mapping between Croatian terms and English equivalents
-   - Document common query patterns and expected value formats
-   - Build sample query examples for training the agent
+### Phase 2A: Schema Analysis & Croatian Field Mapping ✅
+3. **Schema Analysis & Documentation (COMPLETE)**
+   - ✅ Generated comprehensive schema documentation for LangChain agents
+   - ✅ Created complete Croatian ↔ English field mapping dictionary (40+ fields)
+   - ✅ Documented all query patterns and expected value formats
+   - ✅ Built 20+ real-world sample queries for agent training
+   - ✅ Added field type validation and casting guidance for VARCHAR numeric fields
 
+**Key Implementation Files:**
+- `schema_mapping.py`: Complete field mappings and value translations
+- `schema_docs.py`: LangChain-formatted table documentation and prompt templates  
+- `query_patterns.py`: Common search patterns, value formats, and Croatian location terms
+- `training_examples.py`: Comprehensive real-world query examples for few-shot learning
+- `schema_analyzer.py`: Unified interface combining all schema analysis functionality
+
+**Features Delivered:**
+- **Croatian Value Translation**: `da/ne` → `yes/no`, `prizemlje` → `ground_floor`, property types
+- **Smart Query Analysis**: Extracts price ranges, locations, room counts from natural language
+- **Field Relevance Engine**: Suggests relevant database fields based on query content
+- **Query Validation**: Detects invalid price ranges, unrecognized locations, unusual values
+- **Training Examples**: Categories include basic searches, luxury properties, budget finds, complex multi-criteria
+
+### Phase 2B: LangChain SQL Agent Implementation (NEXT)
 4. **LangChain SQL Chain Setup**
    - Initialize SQL database chain with MariaDB connection
    - Configure SQL agent with schema information and Croatian field mappings
@@ -222,13 +283,61 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
     - Deployment guide with Docker setup
     - Troubleshooting guide for common issues
 
-## Example Queries to Support
+## Example Queries Supported
 
-- "Find apartments in Zagreb under 200,000 euros"
-- "Show me houses with sea view in Split"
-- "Properties with parking and elevator in city center"
-- "New constructions from 2020 onwards with 3+ rooms"
-- "Commercial properties for rent near tram lines"
+The schema analysis system now supports comprehensive query understanding and translation:
+
+### 🔍 Basic Searches
+- **"Find apartments in Zagreb under 200,000 euros"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE property_type LIKE '%stan%' 
+  AND lokacija LIKE '%Zagreb%' 
+  AND price < 200000
+  ```
+
+- **"Show me houses with sea view in Split"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE property_type LIKE '%kuća%' 
+  AND lokacija LIKE '%Split%' 
+  AND pogled_na_more = 'da'
+  ```
+
+### 🏡 Feature-Based Searches
+- **"Properties with parking and elevator in city center"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE lift = 'da' 
+  AND JSON_LENGTH(parking) > 0 
+  AND lokacija LIKE '%centar%'
+  ```
+
+- **"Ground floor apartments with balcony"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE property_type LIKE '%stan%' 
+  AND kat = 'prizemlje' 
+  AND balkon_lodza_terasa IS NOT NULL
+  ```
+
+### 🏢 Advanced Searches  
+- **"New constructions from 2020 onwards with 3+ rooms"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE CAST(godina_izgradnje AS UNSIGNED) >= 2020 
+  AND broj_soba IN ('3', '4', '5+')
+  ```
+
+- **"4+ bedroom houses in Split with garden and parking under 600k"**
+  ```sql
+  SELECT * FROM agency_properties 
+  WHERE property_type LIKE '%kuća%' 
+  AND lokacija LIKE '%Split%'
+  AND broj_soba IN ('4', '5+')
+  AND povrsina_okucnice IS NOT NULL 
+  AND price < 600000
+  ```
 
 ## Technical Architecture
 

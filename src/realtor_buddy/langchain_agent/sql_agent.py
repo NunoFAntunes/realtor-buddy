@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain_community.utilities import SQLDatabase
-from langchain.chains import SQLDatabaseChain
+from langchain_experimental.sql import SQLDatabaseChain
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseOutputParser
 

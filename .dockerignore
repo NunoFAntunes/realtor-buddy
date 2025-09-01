@@ -1,0 +1,80 @@
+# Ignore development and cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Test files
+tests/
+test_*
+*_test.py
+
+# Local environment
+.env.local
+.env.development
+.env.test
+
+# Logs
+*.log
+logs/
+
+# Node modules (if any)
+node_modules/
+
+# Temporary files
+tmp/
+temp/
+
+# Model cache (will be mounted as volume)
+.cache/
+
+# Database files (handled by separate container)
+*.sql
+*.db
+*.sqlite

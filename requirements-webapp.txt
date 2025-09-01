@@ -1,0 +1,17 @@
+# FastAPI Web Application Dependencies
+# Add these to your existing requirements.txt
+
+# Web framework
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+
+# Templates and static files
+jinja2==3.1.6
+
+# System monitoring (for health checks)
+psutil==7.0.0
+
+# Already included in main requirements:
+# - torch (for GPU info in health checks)
+# - sqlalchemy (database operations)  
+# - pydantic (included with FastAPI)

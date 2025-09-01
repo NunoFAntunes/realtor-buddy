@@ -6,13 +6,13 @@ A sophisticated real estate search application that leverages AI to make Croatia
 
 Realtor Buddy addresses the challenge of searching through complex real estate data by providing an intelligent interface that understands both Croatian and English property-related queries. The system connects to a MariaDB database containing detailed information about Croatian properties from various real estate agencies.
 
-### ✨ Key Features (Planned)
-- **Natural Language Search**: Query properties using conversational language
-- **Multilingual Support**: Works with both Croatian and English inputs
-- **Comprehensive Database**: Access to extensive property data including location, price, features, and agency information
-- **Smart Query Generation**: AI-powered SQL generation with safety validation
-- **Rich CLI Interface**: Interactive command-line tool with health monitoring and configuration management
-- **Flexible AI Backend**: Support for OpenAI, Anthropic, and Hugging Face models
+### ✨ Key Features
+- **Natural Language Search**: Query properties using conversational language in a web interface
+- **Multilingual Support**: Works with both Croatian and English property search queries
+- **Visual Property Display**: Interactive property cards with images, maps, and detailed information
+- **Smart Query Generation**: AI-powered SQL generation using local Llama-3.1-8B model
+- **Croatian Real Estate Expert**: Understands Croatian property terminology and location names
+- **Fast & Local**: No API costs - runs entirely on your hardware with GPU acceleration
 
 ## 🏗️ Project Structure
 
@@ -29,8 +29,11 @@ realtor-buddy/
 │   │   ├── training_examples.py # Real-world query examples for training
 │   │   ├── schema_analyzer.py  # Unified interface for schema analysis
 │   │   └── sql_agent.py        # Main LangChain SQL agent with Llama-3.1-8B
-│   ├── cli/                    # Command-line interface
-│   │   └── main.py            # Interactive CLI with Rich formatting
+│   ├── webapp/                 # Web application (Phase 3+)
+│   │   ├── api/               # FastAPI backend routes
+│   │   ├── static/            # CSS, JavaScript, images  
+│   │   ├── templates/         # HTML templates
+│   │   └── main.py           # FastAPI application entry point
 │   └── utils/                  # Configuration and utilities
 │       └── config.py          # Environment-based configuration
 ├── tests/                      # Test suite
@@ -39,17 +42,21 @@ realtor-buddy/
 ├── docs/                       # Documentation
 ├── database/
 │   └── agency_properties.sql       # Database schema and sample data (19MB)
-├── docker-compose.yml          # MariaDB setup
-├── requirements.txt            # Python dependencies
+├── docker-compose.yml          # Full stack deployment (database + webapp)
+├── docker-compose.override.yml # Development configuration
+├── Dockerfile                  # Web application container with GPU support
+├── .dockerignore              # Docker build optimization
+├── requirements.txt            # Complete Python dependencies
 └── .env                       # Configuration file
 ```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.8+
-- Docker and Docker Compose
-- AI API Key (OpenAI, Anthropic, or Hugging Face)
+- **Python 3.8+**
+- **Docker and Docker Compose** 
+- **NVIDIA GPU** (RTX 2070+ recommended) with CUDA support
+- **16GB+ RAM** (32GB recommended for optimal performance)
 
 ### 1. Environment Setup
 ```bash
@@ -61,7 +68,7 @@ python -m venv venv
 venv\Scripts\activate  # Windows
 # or: source venv/bin/activate  # Linux/Mac
 
-# Install dependencies
+# Install dependencies (includes PyTorch, Transformers, LangChain, FastAPI)
 pip install -r requirements.txt
 ```
 
@@ -79,20 +86,46 @@ docker-compose up -d
 # Copy environment template
 cp .env.example .env
 
-# Edit .env and add your API keys:
-# HUGGINGFACE_TOKEN=your_token_here
-# or OPENAI_API_KEY=your_key_here
-# or ANTHROPIC_API_KEY=your_key_here
+# Edit .env with database settings (no AI API keys needed - runs locally!)
+# DB_HOST=localhost
+# DB_PORT=3306
+# DB_NAME=njuskam_ultimate3
+# DB_USER=realtor_user
+# DB_PASSWORD=realtor_password
 ```
 
-### 4. Test Installation
+### 4. Launch Web Application
+
+#### Option A: Docker (Recommended)
 ```bash
-# Check database connectivity
-python -m src.realtor_buddy.cli.main health
+# Start full stack (database + web app) with GPU support
+docker-compose up
 
-# Verify configuration
-python -m src.realtor_buddy.cli.main config
+# For development with hot reload
+docker-compose up
+
+# Open browser to: http://localhost:8000
 ```
+
+#### Option B: Local Development
+```bash
+# Start database only
+docker-compose up database
+
+# Install dependencies locally
+pip install -r requirements.txt
+
+# Start web application
+python -m src.realtor_buddy.webapp.main
+
+# Open browser to: http://localhost:8000
+```
+
+#### Try These Searches:
+- "apartments in Zagreb under 200k euros"
+- "houses with sea view in Split"  
+- "3 bedroom properties with elevator"
+- "ground floor apartments with parking"
 
 ## 📊 Database Schema & Field Mapping
 
@@ -126,18 +159,16 @@ The AI agent understands natural language patterns and translates them to proper
 - **"sea view properties"** → `pogled_na_more = 'da'`
 - **"ground floor with elevator"** → `kat = 'prizemlje' AND lift = 'da'`
 
-## 🔧 Available Commands
+## 🌟 Web Application Features
 
-```bash
-# Health monitoring
-python -m src.realtor_buddy.cli.main health
+The Croatian Real Estate Search app provides:
 
-# Configuration status
-python -m src.realtor_buddy.cli.main config
-
-# Property search (Phase 2C - CLI integration coming soon)
-python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
-```
+- **🔍 Natural Language Search**: Type queries like "apartments in Zagreb under 200k euros"
+- **🏠 Visual Property Cards**: See photos, prices, locations, and key features at a glance  
+- **🗺️ Interactive Maps**: View property locations on integrated maps using GPS coordinates
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile devices
+- **⚡ Fast Local AI**: No API costs - Llama-3.1-8B runs on your GPU for instant results
+- **🇭🇷 Croatian Expert**: Understands Croatian property terms, cities, and neighborhoods
 
 ## 📋 Development Status
 
@@ -145,7 +176,6 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
 - [x] Python project structure with proper packaging
 - [x] Database connection layer with SQLAlchemy
 - [x] Comprehensive health monitoring system
-- [x] Rich CLI interface with status indicators
 - [x] Configuration management with validation
 - [x] Docker-based database setup
 
@@ -188,32 +218,66 @@ python -m src.realtor_buddy.cli.main search "apartments in Zagreb"
   - [x] Integrated schema documentation and field mappings
   - [x] Natural language to SQL translation pipeline
 
-### 🚧 Phase 2C: CLI Integration & Testing (Next)
-- [ ] Add search command to existing CLI interface
-- [ ] Query result formatting and display
-- [ ] Interactive query refinement and suggestions
-- [ ] Comprehensive testing with real estate queries
+### ✅ Phase 3: FastAPI Web Backend (Complete)
+- [x] **FastAPI application setup**
+  - [x] Created FastAPI app with async support for Llama inference
+  - [x] Integrated existing SQL agent with web API endpoints
+  - [x] Added CORS support and error handling middleware
+  - [x] Implemented comprehensive Pydantic request/response models
+- [x] **API endpoints for property search**
+  - [x] `/api/search` endpoint for natural language property queries
+  - [x] `/api/health` comprehensive system status monitoring
+  - [x] `/api/search/examples` for query suggestions and guidance
+  - [x] Robust error handling and query validation
+  - [x] Structured property data response formatting
+- [x] **Complete web interface**
+  - [x] Embedded HTML frontend with modern, responsive design
+  - [x] Real-time property search with loading indicators
+  - [x] Property cards displaying price, location, features
+  - [x] Mobile-friendly interface with error handling
+- [x] **Docker deployment**
+  - [x] Complete Dockerfile with NVIDIA GPU support
+  - [x] docker-compose.yml for full stack deployment
+  - [x] Development configuration with hot reload
+  - [x] Health monitoring and automatic service dependencies
+
+### 🚧 Phase 4: Enhanced Frontend Features (Future)
+- [ ] **Advanced property display**
+  - [ ] Image galleries from database JSON URLs
+  - [ ] Interactive maps using latitude/longitude coordinates
+  - [ ] Property detail modal/page with full information
+  - [ ] Advanced filtering and sorting options
+- [ ] **User experience enhancements**
+  - [ ] Pagination for large result sets
+  - [ ] Infinite scroll loading
+  - [ ] Croatian/English language toggle
+  - [ ] Save favorite properties and searches
+- [ ] **Advanced search features**
+  - [ ] Comparison tools for multiple properties
+  - [ ] Price alerts and notifications
+  - [ ] Search history and saved queries
+  - [ ] Advanced filters (price range sliders, map boundaries)
 
 ### 📅 Future Phases
-- **Phase 3**: Query generation and execution
-- **Phase 4**: Enhanced UI and safety features
-- **Phase 5**: Advanced search capabilities
-- **Phase 6**: Testing and documentation
+- **Phase 5**: Advanced Features (favorites, comparisons, alerts)
+- **Phase 6**: Performance & Scaling (caching, optimization)
+- **Phase 7**: Testing & Documentation (comprehensive test suite)
+- **Phase 8**: Deployment (Docker, production deployment)
 
-## Implementation Plan
+## 🛠️ Web Application Implementation Plan
 
-### Phase 1: Project Foundation
-1. **Environment Setup**
-   - Create Python virtual environment
-   - Install core dependencies: `langchain`, `langchain-community`, `pymysql`, `python-dotenv`
-   - Install AI provider SDK (OpenAI, Anthropic, or local LLM)
-   - Set up project structure with proper modules
+### Phase 1: Project Foundation ✅
+1. **Environment Setup (COMPLETE)**
+   - ✅ Python virtual environment with all dependencies
+   - ✅ Installed: `langchain`, `transformers`, `torch`, `pymysql`, `sqlalchemy`
+   - ✅ Local Llama-3.1-8B integration via HuggingFace
+   - ✅ Project structure with proper modules
 
-2. **Database Connection Layer**
-   - Create database connection manager using environment variables
-   - Implement connection pooling for performance
-   - Add database health check functionality
-   - Create utility functions for query execution and result formatting
+2. **Database Connection Layer (COMPLETE)**
+   - ✅ SQLAlchemy database connection manager
+   - ✅ Connection pooling and health monitoring
+   - ✅ MariaDB Docker setup with Croatian property data
+   - ✅ Utility functions for database operations
 
 ### Phase 2A: Schema Analysis & Croatian Field Mapping ✅
 3. **Schema Analysis & Documentation (COMPLETE)**
@@ -274,57 +338,71 @@ result = quick_query("3 bedroom houses with sea view")
    - ✅ Location normalization using Croatian location terms dictionary
    - ✅ Price range and property type standardization in training examples
 
-### Phase 3: Query Generation & Execution
-6. **SQL Query Generation**
-   - Implement safe SQL generation with query validation
-   - Add query optimization hints for large dataset performance
-   - Build complex query support (multiple filters, ranges, location-based)
-   - Implement query result limiting and pagination
+### Phase 3: FastAPI Web Backend ✅
+6. **FastAPI Application Development (COMPLETE)**
+   - ✅ Created async FastAPI app optimized for Llama-3.1-8B inference with background initialization
+   - ✅ Integrated existing SQL agent with comprehensive web API endpoints
+   - ✅ Implemented complete Pydantic models for request/response validation
+   - ✅ Added CORS support, global exception handling, and error recovery middleware
 
-7. **Result Processing**
-   - Create structured result formatting (JSON, table format)
-   - Add result ranking and relevance scoring
-   - Implement image URL processing and display
-   - Build location-based result mapping integration
+**Key Implementation Files:**
+- `webapp/main.py`: Complete FastAPI application with embedded frontend
+- `webapp/models.py`: Comprehensive Pydantic request/response models  
+- `webapp/api/search.py`: Property search endpoints with structured result parsing
+- `webapp/api/health.py`: System health monitoring with GPU and database status
 
-### Phase 4: User Interface & Experience
-8. **Command Line Interface**
-   - Build interactive CLI with query history
-   - Add autocomplete for common property terms
-   - Implement result export functionality (CSV, JSON)
-   - Create verbose/debug mode for query inspection
+7. **Property Search API (COMPLETE)**
+   - ✅ `/api/search` endpoint for natural language property queries with full Croatian field support
+   - ✅ `/api/health` comprehensive system status (database, LLM, GPU, system resources)
+   - ✅ `/api/search/examples` query suggestions and guidance for users
+   - ✅ Robust error handling and SQL query validation with user-friendly messages
+   - ✅ Structured property data formatting with all Croatian real estate fields
 
-9. **Query Validation & Safety**
-   - Implement SQL injection prevention
-   - Add query complexity limits and timeouts
-   - Build error handling with user-friendly messages
-   - Create fallback mechanisms for failed queries
+**Features Delivered:**
+- **Complete Web Interface**: Embedded responsive HTML with real-time search
+- **Property Cards**: Display price, location, rooms, features with Croatian field mapping
+- **System Monitoring**: GPU utilization, database connectivity, model status
+- **Error Recovery**: Graceful handling of AI/database failures with detailed logging
+- **Docker Deployment**: Full-stack containerization with GPU support and health checks
 
-### Phase 5: Advanced Features
-10. **Enhanced Query Capabilities**
-    - Location-based search using latitude/longitude
-    - Price trend analysis and comparative queries
-    - Agency performance and listing statistics
-    - Advanced filtering (sea view, elevator, parking, etc.)
+### Phase 4: Frontend Web Interface
+8. **Search Interface Design**
+   - Modern, responsive search page with intuitive input field
+   - Loading states and progress indicators during AI processing
+   - Error handling with user-friendly messages
+   - Query suggestions and example searches
 
-11. **Performance Optimization**
-    - Implement query caching for common searches
-    - Add database indexing recommendations
-    - Build query performance monitoring
-    - Optimize LLM token usage and response times
+9. **Property Results Display**
+   - Visual property cards with images from database JSON URLs
+   - Display key information: price, location, rooms, features
+   - Pagination and infinite scroll for large result sets
+   - Sort and filter options (price, location, date, etc.)
 
-### Phase 6: Testing & Documentation
-12. **Testing Framework**
-    - Unit tests for database operations
-    - Integration tests for LangChain SQL generation
-    - End-to-end tests with sample queries
-    - Performance benchmarking suite
+### Phase 5: Enhanced User Experience  
+10. **Interactive Features**
+    - Interactive maps showing property locations using GPS coordinates
+    - Property detail pages with full information and image galleries
+    - Responsive design optimized for mobile and desktop
+    - Croatian/English language toggle for international users
 
-13. **Documentation & Examples**
-    - User guide with Croatian and English query examples
-    - API documentation for programmatic usage
-    - Deployment guide with Docker setup
-    - Troubleshooting guide for common issues
+11. **Advanced Search Capabilities**
+    - Save favorite properties and search criteria
+    - Property comparison tools (side-by-side comparison)
+    - Price alerts and new listing notifications
+    - Advanced filters (sea view, elevator, parking, energy rating)
+
+### Phase 6: Performance & Production
+12. **Optimization & Scaling**
+    - Query result caching and database query optimization
+    - Image lazy loading and CDN integration for property photos
+    - Performance monitoring and analytics
+    - GPU memory optimization for Llama model inference
+
+13. **Testing & Deployment**
+    - Comprehensive test suite (unit, integration, end-to-end)
+    - Docker containerization with GPU support
+    - Production deployment guide and monitoring setup
+    - User documentation and Croatian real estate search examples
 
 ## Example Queries Supported
 
@@ -384,13 +462,23 @@ The schema analysis system now supports comprehensive query understanding and tr
 
 ## 🔧 Technical Architecture
 
-### **Current Implementation (Phase 2B Complete)**
+### **Current Implementation (Phase 3 Complete)**
 - **Database**: MariaDB with comprehensive Croatian property data (19MB dataset)
 - **AI/LLM**: Local Llama-3.1-8B via HuggingFace Transformers (optimized for RTX 2070)
 - **LangChain**: SQLDatabaseChain with custom Croatian real estate prompts
-- **Language**: Python 3.8+ with SQLAlchemy, Transformers, PyTorch
-- **Interface**: CLI foundation ready, SQL agent API complete
+- **Backend**: FastAPI with async support, comprehensive API endpoints
+- **Frontend**: Complete responsive web interface with embedded HTML
+- **Language**: Python 3.8+ with FastAPI, SQLAlchemy, Transformers, PyTorch
+- **Deployment**: Docker containers with GPU support and health monitoring
 - **Hardware Requirements**: NVIDIA GPU (RTX 2070+), 16GB+ RAM
+
+### **Production-Ready Web Architecture**
+- **Backend**: FastAPI with async Llama inference and background initialization
+- **API Design**: RESTful endpoints with comprehensive Pydantic validation
+- **Frontend**: Responsive web interface with real-time search and property cards
+- **Database**: MariaDB with health monitoring and connection pooling
+- **Deployment**: Docker Compose with GPU support, hot reload, service dependencies
+- **Monitoring**: System health endpoints (GPU, database, LLM status)
 
 ### **Key Components**
 1. **Schema Analysis Layer** (Phase 2A)
@@ -403,12 +491,20 @@ The schema analysis system now supports comprehensive query understanding and tr
    - Croatian real estate domain-optimized prompts
    - Database safety with read-only operations and query validation
 
-3. **Database Infrastructure** (Phase 1)
+3. **FastAPI Web Application** (Phase 3)
+   - Async web server with comprehensive API endpoints
+   - Embedded responsive frontend with real-time search
+   - System health monitoring and error recovery
+   - Docker containerization with GPU support
+
+4. **Database Infrastructure** (Phase 1)
    - MariaDB with Docker setup and health monitoring
    - SQLAlchemy connection management with pooling
-   - Rich CLI interface with configuration management
+   - Configuration management and health monitoring system
 
 ### **Deployment Strategy**
-- **Local Development**: Direct Python execution with local Llama model
-- **Production**: Docker containers with GPU support for Llama inference
-- **Future**: Web interface, API endpoints, cloud deployment options
+- **Docker Deployment**: `docker-compose up` for complete full-stack deployment
+- **Local Development**: Hot reload with `docker-compose.override.yml` configuration
+- **GPU Support**: NVIDIA runtime with automatic device mapping and model caching
+- **Health Monitoring**: Comprehensive service health checks and automatic restarts
+- **Production Ready**: nginx reverse proxy, service dependencies, and error recovery

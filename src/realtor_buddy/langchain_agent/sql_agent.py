@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import StaticPool
 
-from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
+from langchain_huggingface import HuggingFacePipeline
 from langchain_community.utilities import SQLDatabase
 from langchain.chains.sql_database.query import create_sql_query_chain
 from langchain.prompts import PromptTemplate
@@ -127,7 +127,7 @@ class CroatianRealEstateAgent:
                 self.model_name,
                 device_map="auto",  # Automatically use GPU + CPU if needed
                 trust_remote_code=True,
-                torch_dtype=torch.float16,  # FP16 for GPU efficiency
+                dtype=torch.float16,  # FP16 for GPU efficiency
                 low_cpu_mem_usage=True,     # Optimize CPU memory usage
                 **hub_kwargs
             )

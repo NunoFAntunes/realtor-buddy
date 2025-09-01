@@ -226,8 +226,6 @@ async def home(request: Request):
         </body>
         </html>
         """)
-    
-    return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.exception_handler(HTTPException)

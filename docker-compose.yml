@@ -23,12 +23,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: realtor-buddy-webapp
-    environment:
-      - DB_HOST=database
-      - DB_PORT=3306
-      - DB_NAME=njuskam_ultimate3
-      - DB_USER=realtor_user
-      - DB_PASSWORD=realtor_password
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     volumes:

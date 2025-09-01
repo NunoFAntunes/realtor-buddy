@@ -14,12 +14,17 @@ from sqlalchemy import text
 
 from ..models import HealthResponse
 from ...langchain_agent.sql_agent import CroatianRealEstateAgent
-from ...utils.config import get_database_config
+from ...utils.config import Config
+
+
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+def get_database_config() -> Dict[str, Any]:
+    """Get database configuration dictionary."""
+    return Config.get_db_config()
 
 def get_agent() -> CroatianRealEstateAgent:
     """Dependency to get the SQL agent instance."""
@@ -109,7 +114,7 @@ def get_system_info() -> Dict[str, Any]:
             "memory_total_gb": round(psutil.virtual_memory().total / (1024**3), 2),
             "memory_available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
             "disk_usage_percent": psutil.disk_usage('/').percent if hasattr(psutil.disk_usage('/'), 'percent') else None,
-            "python_version": f"{psutil.version_info.major}.{psutil.version_info.minor}",
+            "python_version": f"{psutil.version_info}",
             "torch_version": torch.__version__ if torch else None,
             "cuda_available": torch.cuda.is_available() if torch else False
         }

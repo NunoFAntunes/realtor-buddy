@@ -13,7 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from langchain_community.llms.huggingface_pipeline import HuggingFacePipeline
 from langchain_community.utilities import SQLDatabase
-from langchain_experimental.sql import SQLDatabaseChain
+from langchain.chains.sql_database.query import create_sql_query_chain
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseOutputParser
 
@@ -23,12 +23,17 @@ from transformers import (
     pipeline
 )
 import torch
+from huggingface_hub import login as hf_login
 
-from ..utils.config import get_database_config
+from ..utils.config import Config
 from .schema_analyzer import get_langchain_config
 from .training_examples import format_examples_for_prompt
 
 logger = logging.getLogger(__name__)
+
+def get_database_config() -> Dict[str, Any]:
+    """Get database configuration dictionary."""
+    return Config.get_db_config()
 
 class SQLQueryParser(BaseOutputParser):
     """Custom parser to extract SQL queries from Llama model output."""
@@ -87,11 +92,30 @@ class CroatianRealEstateAgent:
         logger.info("Setting up local Llama-3.1-8B model for RTX 2070...")
         
         try:
+            # Authenticate to Hugging Face Hub using provided env token(s)
+            hf_token = (
+                os.getenv("HUGGING_FACE_HUB_TOKEN")
+                or os.getenv("HF_TOKEN")
+                or os.getenv("HUGGINGFACEHUB_API_TOKEN")
+                or os.getenv("HUGGINGFACE_TOKEN")
+            )
+            if hf_token:
+                try:
+                    hf_login(token=hf_token, add_to_git_credential=False)
+                    logger.info("Authenticated with Hugging Face Hub using provided token.")
+                except Exception as auth_err:
+                    logger.warning(f"Hugging Face login failed, will attempt direct download with token: {auth_err}")
+            else:
+                logger.warning("No Hugging Face token found in env (HUGGING_FACE_HUB_TOKEN/HF_TOKEN/HUGGINGFACEHUB_API_TOKEN/HUGGINGFACE_TOKEN). If the model is gated, access will fail.")
+
+            hub_kwargs = {"token": hf_token} if hf_token else {}
+            
             # Load tokenizer
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 trust_remote_code=True,
-                padding_side="left"
+                padding_side="left",
+                **hub_kwargs
             )
             
             # Add pad token if it doesn't exist
@@ -105,6 +129,7 @@ class CroatianRealEstateAgent:
                 trust_remote_code=True,
                 torch_dtype=torch.float16,  # FP16 for GPU efficiency
                 low_cpu_mem_usage=True,     # Optimize CPU memory usage
+                **hub_kwargs
             )
             
             # Create text generation pipeline
@@ -199,14 +224,14 @@ SQL Rules:
 Example Queries:
 {examples}
 
-User Question: {input}
+User Question: {question}
 
 Generate ONLY the SQL query. Do not include any explanation or markdown formatting.
 
 SQL Query:"""
         
         return PromptTemplate(
-            input_variables=["table_info", "examples", "input"],
+            input_variables=["table_info", "examples", "question"],
             template=prompt_template
         )
     
@@ -221,21 +246,8 @@ SQL Query:"""
             # Setup database connection
             self.db = self._setup_database_connection()
             
-            # Create SQL prompt template
-            prompt = self._create_sql_prompt_template()
-            
-            # Create SQL database chain
-            self.sql_chain = SQLDatabaseChain.from_llm(
-                llm=self.llm,
-                db=self.db,
-                prompt=prompt,
-                verbose=True,  # Set to False to reduce logging
-                use_query_checker=True,  # Enable SQL query validation
-                query_checker_prompt=None,  # Use default query checker
-                return_intermediate_steps=True,
-                output_parser=SQLQueryParser(),
-                top_k=20  # Limit results
-            )
+            # Create SQL query generation chain (Runnable-based API)
+            self.sql_chain = create_sql_query_chain(self.llm, self.db)
             
             logger.info("Croatian Real Estate SQL Agent initialized successfully")
             
@@ -259,27 +271,34 @@ SQL Query:"""
         logger.info(f"Processing query: {natural_language_query}")
         
         try:
-            # Prepare prompt inputs
-            examples = format_examples_for_prompt(num_examples=5)
-            
-            # Execute the chain
-            result = self.sql_chain.invoke({
-                "query": natural_language_query,
-                "table_info": self.schema_config["table_info"],
-                "examples": examples
-            })
-            
+            # Generate SQL from the natural language question
+            generated_sql = self.sql_chain.invoke({"question": natural_language_query})
+
+            # Sanitize potential markdown/code fences from model output
+            parsed_sql = SQLQueryParser().parse(generated_sql)
+
+            # Ensure a reasonable LIMIT if not present
+            sql_lower = parsed_sql.lower()
+            if sql_lower.strip().startswith("select") and " limit " not in sql_lower:
+                if parsed_sql.strip().endswith(";"):
+                    parsed_sql = parsed_sql.rstrip(";") + " LIMIT 50;"
+                else:
+                    parsed_sql = parsed_sql + " LIMIT 50"
+
+            # Execute SQL against the database
+            execution_result = self.db.run(parsed_sql)
+
             # Format response
             response = {
                 "success": True,
                 "query": natural_language_query,
-                "sql_query": result.get("intermediate_steps", [{}])[0].get("sql_cmd", ""),
-                "result": result.get("result", ""),
-                "intermediate_steps": result.get("intermediate_steps", []),
+                "sql_query": parsed_sql,
+                "result": execution_result,
+                "intermediate_steps": [{"generated_sql": generated_sql}],
                 "error": None
             }
-            
-            logger.info(f"Query executed successfully: {len(str(result.get('result', '')))} chars returned")
+
+            logger.info("Query executed successfully")
             return response
             
         except Exception as e:

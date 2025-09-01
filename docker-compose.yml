@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  database:
+    image: mariadb:10.6
+    container_name: realtor-buddy-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: njuskam_ultimate3
+      MYSQL_USER: realtor_user
+      MYSQL_PASSWORD: realtor_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./agency_properties.sql:/docker-entrypoint-initdb.d/agency_properties.sql
+      - db_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  db_data:

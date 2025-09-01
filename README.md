@@ -31,7 +31,8 @@ realtor-buddy/
 │   ├── unit/                  # Unit tests
 │   └── integration/           # Integration tests
 ├── docs/                       # Documentation
-├── agency_properties.sql       # Database schema and sample data (19MB)
+├── database/
+│   └── agency_properties.sql       # Database schema and sample data (19MB)
 ├── docker-compose.yml          # MariaDB setup
 ├── requirements.txt            # Python dependencies
 └── .env                       # Configuration file

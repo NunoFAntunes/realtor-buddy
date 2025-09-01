@@ -12,7 +12,7 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./agency_properties.sql:/docker-entrypoint-initdb.d/agency_properties.sql
+      - ./database/agency_properties.sql:/docker-entrypoint-initdb.d/agency_properties.sql
       - db_data:/var/lib/mysql
     restart: unless-stopped
 

@@ -1,26 +1,20 @@
 .app {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f8f9fa;
   padding: 2rem 0;
 }
 
 .header {
   text-align: center;
   margin-bottom: 3rem;
-  color: white;
 }
 
 .title {
-  font-size: 3rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.subtitle {
-  font-size: 1.2rem;
-  opacity: 0.9;
-  font-weight: 300;
+  font-size: 2.5rem;
+  font-weight: 400;
+  margin: 0;
+  color: #2d3748;
+  letter-spacing: -0.025em;
 }
 
 .search-section {
@@ -31,8 +25,8 @@
 
 .content {
   background: white;
-  border-radius: 1rem;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
   padding: 2rem;
   min-height: 400px;
 }

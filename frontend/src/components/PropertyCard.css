@@ -1,15 +1,13 @@
 .property-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
 }
 
 .property-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #cbd5e0;
 }
 
 .card-image {

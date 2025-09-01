@@ -46,7 +46,6 @@ function App() {
       <div className="container">
         <header className="header">
           <h1 className="title">Realtor Buddy</h1>
-          <p className="subtitle">Find your perfect Croatian property</p>
         </header>
 
         <div className="search-section">

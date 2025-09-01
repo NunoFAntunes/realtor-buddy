@@ -73,15 +73,24 @@ COMMON_QUERY_PATTERNS = {
             "apartments only",
             "houses for sale",
             "commercial properties",
-            "land/plots"
+            "land/plots",
+            "luxury properties"
         ],
-        "sql_pattern": "property_type LIKE '%{type}%'",
+        "sql_pattern": "property_type IN ('{types}')",
         "fields_used": ["property_type", "tip_nekretnine"],
+        "english_values": [
+            "apartments",
+            "houses", 
+            "commercial_land",
+            "commercial_real_estate",
+            "luxury_properties"
+        ],
         "value_mappings": {
-            "apartment": "stan",
-            "house": "kuća", 
-            "commercial": "poslovni prostor",
-            "land": "zemljište"
+            "apartment": ["apartments", "stan"],
+            "house": ["houses", "kuća"], 
+            "commercial": ["commercial_real_estate", "commercial_land", "poslovni prostor"],
+            "land": ["commercial_land", "zemljište"],
+            "luxury": ["luxury_properties", "luksuzne nekretnine"]
         }
     },
     
@@ -104,19 +113,41 @@ COMMON_QUERY_PATTERNS = {
         }
     },
     
+    "agency_type": {
+        "description": "Filter by agency type",
+        "user_examples": [
+            "properties from agencies",
+            "direct from owner",
+            "investor properties"
+        ],
+        "sql_pattern": "agency_type = '{type}'",
+        "fields_used": ["agency_type"],
+        "valid_values": ["agencija", "investitor", "trgovina"],
+        "value_mappings": {
+            "agency": "agencija",
+            "investor": "investitor", 
+            "shop": "trgovina",
+            "direct": "investitor"
+        }
+    },
+    
     "amenities_features": {
         "description": "Search by property features and amenities",
         "user_examples": [
             "properties with elevator",
             "sea view apartments", 
             "parking included",
-            "with balcony"
+            "with balcony",
+            "with terrace",
+            "with loggia"
         ],
         "sql_patterns": {
             "elevator": "lift = 'da'",
             "sea_view": "pogled_na_more = 'da'",
             "parking": "JSON_LENGTH(parking) > 0",
-            "balcony": "balkon_lodza_terasa IS NOT NULL"
+            "balcony": "balkon_lodza_terasa LIKE '%Balkon%'",
+            "terrace": "balkon_lodza_terasa LIKE '%Terasa%'",
+            "loggia": "balkon_lodza_terasa LIKE '%Lođa%'"
         },
         "boolean_fields": ["lift", "pogled_na_more"],
         "json_fields": ["parking", "grijanje"]
@@ -150,6 +181,67 @@ COMMON_QUERY_PATTERNS = {
 
 # Expected value formats for different field types
 VALUE_FORMATS = {
+    "balkon_lodza_terasa": {
+        "data_type": "VARCHAR(200)",
+        "format": "Comma-separated Croatian outdoor space types",
+        "valid_values": [
+            "Balkon",
+            "Lođa (Loggia)", 
+            "Terasa",
+            "Terasa, Balkon",
+            "Terasa, Lođa (Loggia), Balkon",
+            "Lođa (Loggia), Balkon",
+            "Terasa, Lođa (Loggia)",
+            "Balkon, Terasa",
+            "Lođa (Loggia), Terasa",
+            "Balkon, Lođa (Loggia)",
+            "Balkon, Lođa (Loggia), Terasa",
+            "Nema ništa navedeno",
+            None
+        ],
+        "search_patterns": {
+            "balcony": "LIKE '%Balkon%'",
+            "terrace": "LIKE '%Terasa%'",
+            "loggia": "LIKE '%Lođa%'",
+            "any_outdoor": "IS NOT NULL AND != 'Nema ništa navedeno'"
+        }
+    },
+    
+    "broj_etaza": {
+        "data_type": "VARCHAR(100)",
+        "format": "Croatian building floor descriptions",
+        "valid_values": [
+            "Jednoetažni",    # Single-story
+            "Dvoetažni",      # Two-story  
+            "Višeetažni",     # Multi-story
+            "Prizemnica",     # Ground level house
+            "Visoka prizemnica", # High ground level
+            "Katnica",        # House with floors
+            "Višekatnica",    # Multi-floor house
+            "Dvokatnica",     # Two-floor house
+            None
+        ],
+        "search_patterns": {
+            "single_story": "= 'Jednoetažni' OR = 'Prizemnica'",
+            "multi_story": "LIKE '%višeet%' OR LIKE '%višekat%'",
+            "two_story": "= 'Dvoetažni' OR = 'Dvokatnica'"
+        }
+    },
+    
+    "broj_parkirnih_mjesta": {
+        "data_type": "VARCHAR(100)",
+        "format": "Parking space count or description",
+        "valid_values": [
+            "1", "2", "3", "4", "5", "6", "7", "7+",
+            "nema vlastito parkirno mjesto",
+            None
+        ],
+        "search_patterns": {
+            "has_parking": "IS NOT NULL AND != 'nema vlastito parkirno mjesto'",
+            "no_parking": "= 'nema vlastito parkirno mjesto' OR IS NULL",
+            "multiple_spaces": "IN ('2', '3', '4', '5', '6', '7', '7+')"
+        }
+    },
     "price": {
         "data_type": "DECIMAL(12,2)",
         "format": "Numeric (EUR currency)",
@@ -315,7 +407,8 @@ QUERY_PARSING_REGEXES = {
         r"apartment|stan|apartman",
         r"house|kuća|vila", 
         r"commercial|poslovni prostor",
-        r"land|zemljište|parcela"
+        r"land|zemljište|parcela",
+        r"luxury|luksuz"
     ],
     
     "features": [
@@ -396,16 +489,20 @@ def extract_room_count(query: str) -> str:
     return ""
 
 def identify_property_type(query: str) -> str:
-    """Identify property type from user query."""
+    """Identify property type from user query, handling both English and Croatian values."""
     query_lower = query.lower()
     if re.search(r"apartment|stan", query_lower):
-        return "stan"
+        return "apartments"  # Return English database value
     elif re.search(r"house|kuća", query_lower):
-        return "kuća"  
+        return "houses"  # Return English database value
     elif re.search(r"commercial|poslovni", query_lower):
-        return "poslovni prostor"
+        if re.search(r"land|zemljište", query_lower):
+            return "commercial_land"
+        return "commercial_real_estate"  
+    elif re.search(r"luxury|luksuz", query_lower):
+        return "luxury_properties"
     elif re.search(r"land|zemljište", query_lower):
-        return "zemljište"
+        return "commercial_land"
     return ""
 
 def extract_features(query: str) -> List[str]:

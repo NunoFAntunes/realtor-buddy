@@ -240,9 +240,9 @@ def format_sample_queries_for_prompt() -> str:
         formatted.append("")
     return "\n".join(formatted)
 
-def get_langchain_table_info() -> str:
+def get_langchain_table_info() -> dict:
     """Get formatted table information for LangChain SQL agents."""
-    return LANGCHAIN_TABLE_INFO
+    return {"agency_properties": LANGCHAIN_TABLE_INFO}
 
 def get_prompt_template() -> str:
     """Get the complete prompt template for Croatian real estate queries."""

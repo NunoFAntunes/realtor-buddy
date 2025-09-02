@@ -11,27 +11,12 @@ from typing import Optional, Dict, Any, List
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import StaticPool
 
-from langchain_huggingface import HuggingFacePipeline
+from langchain_openai import ChatOpenAI
 from langchain_community.utilities import SQLDatabase
 from langchain.chains.sql_database.query import create_sql_query_chain
 from langchain.prompts import PromptTemplate
 from langchain.schema import BaseOutputParser
-
-from transformers import (
-    AutoTokenizer, 
-    AutoModelForCausalLM, 
-    pipeline
-)
-
-try:
-    from transformers import BitsAndBytesConfig
-    import bitsandbytes
-    QUANTIZATION_AVAILABLE = True
-except ImportError:
-    QUANTIZATION_AVAILABLE = False
-    BitsAndBytesConfig = None
-import torch
-from huggingface_hub import login as hf_login
+import openai
 
 from ..utils.config import Config
 from .schema_analyzer import get_langchain_config
@@ -47,45 +32,97 @@ class SQLQueryParser(BaseOutputParser):
     """Custom parser to extract SQL queries from Llama model output."""
     
     def parse(self, text: str) -> str:
-        """Extract SQL query from model response."""
+        """Extract SQL query from model response and replace SELECT clause with SELECT *."""
         # Remove any markdown code blocks
         if "```sql" in text:
             start = text.find("```sql") + 6
             end = text.find("```", start)
             if end != -1:
-                return text[start:end].strip()
-        
-        if "```" in text:
+                text = text[start:end].strip()
+        elif "```" in text:
             start = text.find("```") + 3
             end = text.find("```", start)
             if end != -1:
-                return text[start:end].strip()
+                text = text[start:end].strip()
         
         # Look for SELECT statements
         text_upper = text.upper()
         if "SELECT" in text_upper:
             select_start = text_upper.find("SELECT")
-            # Find the end of the query (semicolon or end of text)
             remaining = text[select_start:]
-            semicolon = remaining.find(";")
-            if semicolon != -1:
-                return remaining[:semicolon + 1].strip()
-            else:
-                return remaining.strip()
+            
+            # Find potential end markers for the SQL query
+            end_markers = [
+                "\nSQLResult:",
+                "\n\nSQLResult:",
+                "SQLResult:",
+                "\n| ",
+                "\n---",
+                "There are no more rows",
+                "\nNote:",
+                "\nExplanation:"
+            ]
+            
+            end_pos = len(remaining)
+            for marker in end_markers:
+                marker_pos = remaining.find(marker)
+                if marker_pos != -1 and marker_pos < end_pos:
+                    end_pos = marker_pos
+            
+            # Also check for semicolon (but not if it's followed by result formatting)
+            semicolon_pos = remaining.find(";")
+            if semicolon_pos != -1:
+                # Check if there's result formatting after the semicolon
+                after_semicolon = remaining[semicolon_pos + 1:].strip()
+                if not after_semicolon or not any(marker.strip() in after_semicolon for marker in end_markers):
+                    end_pos = min(end_pos, semicolon_pos + 1)
+                else:
+                    end_pos = min(end_pos, semicolon_pos)
+            
+            sql_query = remaining[:end_pos].strip()
+            
+            # Replace SELECT clause with SELECT *
+            sql_query = self._replace_select_with_asterisk(sql_query)
+            
+            return sql_query
         
         return text.strip()
+    
+    def _replace_select_with_asterisk(self, sql_query: str) -> str:
+        """Replace the SELECT clause with SELECT * to return all columns."""
+        import re
+        
+        # Match SELECT ... FROM pattern with case insensitive regex
+        # This handles multi-line selections and complex field lists
+        pattern = r'(SELECT\s+)(?:(?:DISTINCT\s+)?(?:[^,\s]+(?:\s*,\s*[^,\s]+)*)?(?:\s*,\s*[^,\s]+)*\s*)(FROM\s+)'
+        
+        # Use a more robust approach with word boundaries and handle complex cases
+        sql_upper = sql_query.upper()
+        select_pos = sql_upper.find('SELECT')
+        from_pos = sql_upper.find('FROM', select_pos)
+        
+        if select_pos != -1 and from_pos != -1:
+            # Extract parts: before SELECT, SELECT keyword, between SELECT and FROM, FROM and after
+            before_select = sql_query[:select_pos]
+            select_keyword = sql_query[select_pos:select_pos + 6]  # "SELECT"
+            from_and_after = sql_query[from_pos:]
+            
+            # Reconstruct with SELECT *
+            return f"{before_select}{select_keyword} * {from_and_after}"
+        
+        return sql_query
 
 class CroatianRealEstateAgent:
     """
-    LangChain SQL Agent for Croatian real estate queries using local Llama-3.1-8B.
+    LangChain SQL Agent for Croatian real estate queries using OpenAI models.
     """
     
-    def __init__(self, model_name: str = "meta-llama/Llama-3.1-8B-Instruct"):
+    def __init__(self, model_name: str = "gpt-4.1"):
         """
         Initialize the Croatian Real Estate SQL Agent.
         
         Args:
-            model_name: HuggingFace model identifier for local Llama model
+            model_name: OpenAI model identifier (e.g., "gpt-4.1", "gpt-4")
         """
         self.model_name = model_name
         self.llm = None
@@ -93,100 +130,42 @@ class CroatianRealEstateAgent:
         self.db = None
         self.schema_config = get_langchain_config()
         
-        logger.info(f"Initializing Croatian Real Estate Agent with model: {model_name}")
+        logger.info(f"Initializing Croatian Real Estate Agent with OpenAI model: {model_name}")
     
-    def _setup_local_llm(self) -> HuggingFacePipeline:
-        """Set up local Llama-3.1-8B model with conditional quantization for RTX 2070."""
-        logger.info("Setting up Llama-3.1-8B model with auto-detection for RTX 2070...")
+    def _setup_openai_llm(self) -> ChatOpenAI:
+        """Set up OpenAI model using API key."""
+        logger.info(f"Setting up OpenAI model: {self.model_name}")
         
         try:
-            # Authenticate to Hugging Face Hub using provided env token(s)
-            hf_token = (
-                os.getenv("HUGGING_FACE_HUB_TOKEN")
-                or os.getenv("HF_TOKEN")
-                or os.getenv("HUGGINGFACEHUB_API_TOKEN")
-                or os.getenv("HUGGINGFACE_TOKEN")
-            )
-            if hf_token:
-                try:
-                    hf_login(token=hf_token, add_to_git_credential=False)
-                    logger.info("Authenticated with Hugging Face Hub using provided token.")
-                except Exception as auth_err:
-                    logger.warning(f"Hugging Face login failed, will attempt direct download with token: {auth_err}")
-            else:
-                logger.warning("No Hugging Face token found in env (HUGGING_FACE_HUB_TOKEN/HF_TOKEN/HUGGINGFACEHUB_API_TOKEN/HUGGINGFACE_TOKEN). If the model is gated, access will fail.")
-
-            hub_kwargs = {"token": hf_token} if hf_token else {}
-            
-            # Check if CUDA and quantization are available
-            cuda_available = torch.cuda.is_available()
-            use_quantization = QUANTIZATION_AVAILABLE and cuda_available
-            
-            if use_quantization:
-                logger.info("Using 4-bit quantization (CUDA available)")
-                quantization_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_use_double_quant=True,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.bfloat16
-                )
-            else:
-                logger.info("Quantization not available or CUDA not detected, using FP16")
-                quantization_config = None
-            
-            # Load tokenizer
-            tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                trust_remote_code=True,
-                padding_side="left",
-                **hub_kwargs
+            # Get OpenAI API key from environment
+            api_key = (
+                os.getenv("OPENAI_API_KEY")
+                or os.getenv("OPENAI_KEY")
             )
             
-            # Add pad token if it doesn't exist
-            if tokenizer.pad_token is None:
-                tokenizer.pad_token = tokenizer.eos_token
+            if not api_key:
+                raise ValueError("OpenAI API key not found in environment variables. "
+                               "Please set OPENAI_API_KEY or OPENAI_KEY.")
             
-            # Load model with conditional quantization
-            model_kwargs = {
-                "device_map": "auto",
-                "trust_remote_code": True,
-                "low_cpu_mem_usage": True,
-                **hub_kwargs
-            }
-            
-            if use_quantization:
-                model_kwargs["quantization_config"] = quantization_config
-            else:
-                # Fallback to FP16 if quantization not available
-                model_kwargs["torch_dtype"] = torch.float16
-            
-            model = AutoModelForCausalLM.from_pretrained(
-                self.model_name,
-                **model_kwargs
-            )
-            
-            # Create text generation pipeline
-            pipe = pipeline(
-                "text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                max_new_tokens=512,
+            # Initialize OpenAI chat model
+            llm = ChatOpenAI(
+                model=self.model_name,
                 temperature=0.1,  # Low temperature for consistent SQL generation
-                do_sample=True,
-                pad_token_id=tokenizer.eos_token_id,
-                repetition_penalty=1.1,
+                max_tokens=512,
+                openai_api_key=api_key,
+                model_kwargs={
+                    "top_p": 1.0,
+                    "frequency_penalty": 0.0,
+                    "presence_penalty": 0.0,
+                }
             )
             
-            # Wrap in LangChain HuggingFacePipeline
-            llm = HuggingFacePipeline(pipeline=pipe)
-            
-            model_type = "quantized" if use_quantization else "FP16"
-            logger.info(f"Successfully loaded {model_type} Llama-3.1-8B model")
+            logger.info(f"Successfully initialized OpenAI model: {self.model_name}")
             return llm
             
         except Exception as e:
-            logger.error(f"Failed to load local model: {e}")
-            raise RuntimeError(f"Could not initialize local Llama model: {e}")
+            logger.error(f"Failed to initialize OpenAI model: {e}")
+            raise RuntimeError(f"Could not initialize OpenAI model: {e}")
     
     def _setup_database_connection(self) -> SQLDatabase:
         """Set up database connection for LangChain SQL operations."""
@@ -260,6 +239,7 @@ Example Queries:
 
 User Question: {question}
 
+The examples shown in the example file can also be written in Croatian, so you must account for both languages.
 Generate ONLY the SQL query. Do not include any explanation or markdown formatting.
 
 SQL Query:"""
@@ -270,12 +250,12 @@ SQL Query:"""
         )
     
     def initialize(self) -> None:
-        """Initialize the SQL agent with local LLM and database connection."""
+        """Initialize the SQL agent with OpenAI LLM and database connection."""
         logger.info("Initializing Croatian Real Estate SQL Agent...")
         
         try:
-            # Setup local Llama model
-            self.llm = self._setup_local_llm()
+            # Setup OpenAI model
+            self.llm = self._setup_openai_llm()
             
             # Setup database connection
             self.db = self._setup_database_connection()
@@ -313,7 +293,7 @@ SQL Query:"""
 
             # Ensure a reasonable LIMIT if not present
             sql_lower = parsed_sql.lower()
-            if sql_lower.strip().startswith("select") and " limit " not in sql_lower:
+            if sql_lower.strip().startswith("select") and "limit" not in sql_lower:
                 if parsed_sql.strip().endswith(";"):
                     parsed_sql = parsed_sql.rstrip(";") + " LIMIT 50;"
                 else:
@@ -374,13 +354,13 @@ SQL Query:"""
             return f"Error getting schema info: {e}"
 
 # Convenience functions
-def create_agent(model_name: str = "meta-llama/Llama-3.1-8B-Instruct") -> CroatianRealEstateAgent:
-    """Create and initialize a Croatian Real Estate SQL Agent."""
+def create_agent(model_name: str = "gpt-4.1") -> CroatianRealEstateAgent:
+    """Create and initialize a Croatian Real Estate SQL Agent with OpenAI."""
     agent = CroatianRealEstateAgent(model_name=model_name)
     agent.initialize()
     return agent
 
-def quick_query(query: str, model_name: str = "meta-llama/Llama-3.1-8B-Instruct") -> Dict[str, Any]:
+def quick_query(query: str, model_name: str = "gpt-4.1") -> Dict[str, Any]:
     """Execute a quick query without maintaining agent state."""
     agent = create_agent(model_name)
     return agent.query(query)

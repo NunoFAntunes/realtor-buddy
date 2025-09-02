@@ -23,7 +23,7 @@ class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY')
     LLM_PROVIDER = os.getenv('LLM_PROVIDER', 'openai')  # openai, anthropic
-    LLM_MODEL = os.getenv('LLM_MODEL', 'gpt-3.5-turbo')
+    LLM_MODEL = os.getenv('LLM_MODEL', 'gpt-4.1')
     LLM_TEMPERATURE = float(os.getenv('LLM_TEMPERATURE', '0.1'))
     
     # Application settings

@@ -13,7 +13,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Find apartments in Zagreb under 200,000 euros",
         "sql_query": """
-            SELECT id, title, price, lokacija, broj_soba, povrsina, agency_name
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments' 
             AND lokacija LIKE '%Zagreb%' 
@@ -29,7 +29,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Show me houses with sea view in Split",
         "sql_query": """
-            SELECT id, title, price, lokacija, pogled_na_more, povrsina, broj_soba
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'houses' 
             AND lokacija LIKE '%Split%'
@@ -44,7 +44,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "3 bedroom apartments between 100,000 and 300,000 euros",
         "sql_query": """
-            SELECT id, title, price, lokacija, broj_soba, povrsina, energetski_razred
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND broj_soba = '3'
@@ -61,7 +61,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Large apartments over 100 square meters in Zagreb",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina, broj_soba
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND lokacija LIKE '%Zagreb%'
@@ -77,7 +77,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Small properties under 60 sqm with parking",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina, parking
+            SELECT *
             FROM agency_properties 
             WHERE CAST(povrsina AS UNSIGNED) < 60
             AND povrsina IS NOT NULL
@@ -93,7 +93,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Properties with elevator and parking in city center",
         "sql_query": """
-            SELECT id, title, price, lokacija, lift, parking, kat
+            SELECT *
             FROM agency_properties 
             WHERE lift = 'da'
             AND JSON_LENGTH(parking) > 0
@@ -108,7 +108,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Ground floor apartments with balcony",
         "sql_query": """
-            SELECT id, title, price, lokacija, kat, balkon_lodza_terasa, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND kat = 'prizemlje'
@@ -125,7 +125,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "New construction from 2020 onwards with high energy rating",
         "sql_query": """
-            SELECT id, title, price, lokacija, godina_izgradnje, energetski_razred, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE CAST(godina_izgradnje AS UNSIGNED) >= 2020
             AND energetski_razred IN ('A+', 'A', 'B')
@@ -140,7 +140,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Recently renovated properties after 2015",
         "sql_query": """
-            SELECT id, title, price, lokacija, godina_zadnje_renovacije, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE CAST(godina_zadnje_renovacije AS UNSIGNED) > 2015
             AND godina_zadnje_renovacije IS NOT NULL
@@ -155,7 +155,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Expensive properties over 500k euros",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina, property_type, pogled_na_more
+            SELECT *
             FROM agency_properties 
             WHERE price > 500000
             ORDER BY price DESC
@@ -168,7 +168,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Penthouses and attic apartments with sea view",
         "sql_query": """
-            SELECT id, title, price, lokacija, kat, pogled_na_more, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND kat = 'potkrovlje'
@@ -184,7 +184,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Seaside properties near the beach under 400k",
         "sql_query": """
-            SELECT id, title, price, lokacija, pogled_na_more, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE price < 400000
             AND price IS NOT NULL
@@ -200,7 +200,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Properties in Dubrovnik old town area",
         "sql_query": """
-            SELECT id, title, price, lokacija, property_type, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE lokacija LIKE '%Dubrovnik%'
             AND (lokacija LIKE '%stari grad%' OR lokacija LIKE '%old town%')
@@ -215,7 +215,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Commercial spaces for rent in Zagreb center",
         "sql_query": """
-            SELECT id, title, price, lokacija, namjena_poslovnog_prostora, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'commercial_real_estate'
             AND lokacija LIKE '%Zagreb%'
@@ -230,7 +230,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Investment properties with good rental potential",
         "sql_query": """
-            SELECT id, title, price, lokacija, broj_soba, povrsina, agency_type
+            SELECT *
             FROM agency_properties 
             WHERE agency_type = 'investitor'
             AND price IS NOT NULL
@@ -246,7 +246,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Properties with central heating and AC",
         "sql_query": """
-            SELECT id, title, price, lokacija, grijanje, tehnika, povrsina
+            SELECT *
             FROM agency_properties 
             WHERE JSON_CONTAINS(grijanje, '"centralno grijanje"')
             OR grijanje LIKE '%centralno%'
@@ -260,7 +260,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Pet-friendly apartments with yard space",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina_okucnice, ostali_objekti_i_povrsine
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND (povrsina_okucnice IS NOT NULL OR 
@@ -276,7 +276,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Affordable starter homes under 80k euros",
         "sql_query": """
-            SELECT id, title, price, lokacija, property_type, povrsina, broj_soba
+            SELECT *
             FROM agency_properties 
             WHERE price < 80000
             AND price IS NOT NULL
@@ -291,7 +291,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Properties requiring renovation under 100k",
         "sql_query": """
-            SELECT id, title, price, lokacija, namjestenost_i_stanje, godina_zadnje_renovacije
+            SELECT *
             FROM agency_properties 
             WHERE price < 100000
             AND price IS NOT NULL
@@ -309,7 +309,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Luxury properties with premium features over 300k",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina, pogled_na_more, lift
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'luxury_properties'
             AND price > 300000
@@ -324,7 +324,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Commercial land for development projects",
         "sql_query": """
-            SELECT id, title, price, lokacija, povrsina, namjena_zemljista
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'commercial_land'
             AND price IS NOT NULL
@@ -339,7 +339,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "4+ bedroom houses in Split with garden and parking under 600k",
         "sql_query": """
-            SELECT id, title, price, lokacija, broj_soba, povrsina_okucnice, parking
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'houses'
             AND lokacija LIKE '%Split%'
@@ -358,7 +358,7 @@ TRAINING_EXAMPLES = [
     {
         "user_query": "Modern apartments from 2018+ with elevator, A/B energy rating, and balcony in Zagreb",
         "sql_query": """
-            SELECT id, title, price, lokacija, godina_izgradnje, lift, energetski_razred, balkon_lodza_terasa
+            SELECT *
             FROM agency_properties 
             WHERE property_type = 'apartments'
             AND lokacija LIKE '%Zagreb%'
